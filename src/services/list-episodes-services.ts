@@ -1,4 +1,13 @@
-export const serviceListEpisodes = async () => {
+import { PodCastTransferModel } from "../models/pod-cast-transfer-model";
+import { StatusCode } from "../utils/status-codes";
+
+export const serviceListEpisodes = async (): Promise<PodCastTransferModel>  => {
+
+    let responseFormat:PodCastTransferModel = {
+        statusCode: 0,
+        body: []    
+    };
+    
     const data = [
                     {
                         podcastName: "flow",
@@ -25,5 +34,9 @@ export const serviceListEpisodes = async () => {
                         category: ["tecnologia", "Inteligência Artificial", "programação", "python", "Google Colab", "Transcrição de Vídeo", "Open AI"]
                     }    
                 ];
-    return data;
+
+    responseFormat.statusCode = StatusCode.OK
+    responseFormat.body = data;
+                
+    return responseFormat;
 }

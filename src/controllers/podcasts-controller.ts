@@ -1,16 +1,21 @@
 import {IncomingMessage,  ServerResponse } from "http";
 import { serviceListEpisodes } from "../services/list-episodes-services";
 import { serviceFilterEspisodes } from "../services/filter-episodes-services";
+import { StatusCode } from "../utils/status-codes";
+import { ContentType } from "../utils/content-type";
+import { PodCastTransferModel } from "../models/pod-cast-transfer-model";
 
 export const getListEpisodes = async (
     request: IncomingMessage, 
     response: ServerResponse
 ) => {
 
-    const content = await serviceListEpisodes();
+    const content: PodCastTransferModel = await serviceListEpisodes();
 
-    response.writeHead(200, {"Content-Type": "application/json"});
+    response.writeHead(content.statusCode, {"Content-Type": ContentType.JSON});
     response.end(JSON.stringify(content));
+    return;
+
 };
 
 export const getFilterEpisodes = async (
@@ -22,23 +27,37 @@ export const getFilterEpisodes = async (
     const params = new URLSearchParams(queryString);
 
     if (params.size != 1 || !params.has("p")) {
-        response.writeHead(400, {"Content-Type": "application/json"});
+        response.writeHead(StatusCode.BAD_REQUEST , {"Content-Type": ContentType.JSON});
         response.end(JSON.stringify({message: "Parâmetro inválido"}));
-        return;
 
+        return;
     }
 
     const pesquisa = (params.get("p") ?? "").toString();
+    if (pesquisa.length === 0) {
+        response.writeHead(StatusCode.BAD_REQUEST , {"Content-Type": ContentType.JSON});
+        response.end(JSON.stringify({message: "Parâmetro inválido"}));
 
-    const content = await serviceFilterEspisodes(pesquisa);
- 
-    if (content.length === 0) {
-        response.writeHead(404, {"Content-Type": "application/json"});
-        response.end(JSON.stringify({message: "Nenhum episódio encontrado"}));
         return;
-    } else {
-        response.writeHead(200, {"Content-Type": "application/json"});
-        response.end(JSON.stringify(content));
     }
+
+
+    try {
+        const content: PodCastTransferModel = await serviceFilterEspisodes(pesquisa);
+        response.writeHead(content.statusCode, {"Content-Type": ContentType.JSON});
+        response.end(JSON.stringify(content.body));
+        return;
+
+    } catch (error: unknown ) {
+
+        if (error instanceof Error && error.message === "Nenhum epísódio encontrado") {
+            response.writeHead(StatusCode.NO_CONTENT);
+            response.end();            
+        } else {
+            response.writeHead(StatusCode.INTERNAL_SERVER_ERROR, {"Content-Type": ContentType.JSON});
+            response.end(JSON.stringify({message: "Erro interno do servidor"}));
+        }
+    }
+ 
 
 }
